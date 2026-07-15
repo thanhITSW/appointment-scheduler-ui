@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(46, 134, 171, 0.12), transparent 40%),
+    radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 35%),
+    #f0f4f8;
+  -webkit-font-smoothing: antialiased;
+}
