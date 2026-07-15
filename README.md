@@ -1,6 +1,6 @@
-# Dealership Service Scheduler
+# Unified Service Scheduler
 
-React SPA for **Service Advisors** — view appointments, book service visits, integrated with [Appointment API](../appointment-api/README.md).
+React SPA for **Service Advisors** — appointment scheduling to replace manual booking, integrated with [Appointment API](../appointment-api/README.md).
 
 **System design:** [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) · **API contract:** [appointment-api/docs/API.md](../appointment-api/docs/API.md)
 
@@ -119,7 +119,7 @@ npm run lint     # oxlint
 
 | Requirement | Deliverable |
 |-------------|-------------|
-| Scenario | Dealership Appointment Scheduling |
+| Scenario | A — The Unified Service Scheduler |
 | System design | [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) |
 | Frontend service layer | `src/services/*` |
 | Backend + tests | [`appointment-api`](../appointment-api/) — `mvn test` |

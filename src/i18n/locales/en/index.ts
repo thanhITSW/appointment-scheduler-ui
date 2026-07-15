@@ -2,7 +2,7 @@ import { errorMessages } from './errors'
 
 const en = {
   app: {
-    name: 'Dealership Service Scheduler',
+    name: 'Unified Service Scheduler',
   },
   nav: {
     dashboard: 'Dashboard',

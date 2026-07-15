@@ -1,18 +1,19 @@
-# System Design — Dealership Service Scheduler (Frontend)
+# System Design — Unified Service Scheduler (Frontend)
 
 ## 1. Overview
 
 ### Purpose
 
-Provide a **Service Advisor console** for dealership staff to view today's workload, search appointments, and book new service visits — backed by the [Appointment API](../appointment-api/README.md).
+Provide a **Service Advisor console** that replaces manual dealership booking: schedule a service for a vehicle at a dealership, check bay + technician availability, and persist the confirmed appointment — backed by the [Appointment API](../appointment-api/README.md).
 
-This repository implements the **frontend service layer and UI** for the challenge scenario **Dealership Appointment Scheduling**.
+This repository implements the **frontend service layer and UI** for **Scenario A: The Unified Service Scheduler** (Ownership domain).
 
 ### Challenge scenario selected
 
 | Item | Choice |
 |------|--------|
-| Scenario | **Appointment Scheduling** (dealership service booking) |
+| Scenario | **A — The Unified Service Scheduler** |
+| Domain | Ownership |
 | Implementation focus | **Frontend** — React SPA + typed service layer |
 | Companion backend | [`appointment-api`](../appointment-api/) (Spring Boot REST) |
 
@@ -37,7 +38,7 @@ This repository implements the **frontend service layer and UI** for the challen
 
 | ID | Requirement | How it is met |
 |----|-------------|---------------|
-| **UI-FR-1** | Advisor can sign in | `LoginPage` → `auth.service.login` → JWT in `localStorage` (`dss.auth`) |
+| **UI-FR-1** | Advisor can sign in | `LoginPage` → `auth.service.login` → JWT in `localStorage` (`uss.auth`) |
 | **UI-FR-2** | View today's appointments | `DashboardPage` filters list by current date |
 | **UI-FR-3** | Search / filter appointments | `AppointmentListPage` — date, status, client-side name search |
 | **UI-FR-4** | Book for existing customer | Autocomplete customer search → vehicles → check availability → create |
