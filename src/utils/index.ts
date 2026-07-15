@@ -1,7 +1,3 @@
-export function isStubMode(): boolean {
-  return import.meta.env.VITE_USE_STUBS !== 'false'
-}
-
 export function vehicleLabel(vehicle: {
   year: number
   make: string
@@ -9,4 +5,11 @@ export function vehicleLabel(vehicle: {
   licensePlate: string
 }): string {
   return `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})`
+}
+
+export function customerLabel(customer: {
+  firstName: string
+  lastName: string
+}): string {
+  return `${customer.firstName} ${customer.lastName}`.trim()
 }

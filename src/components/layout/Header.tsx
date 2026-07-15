@@ -26,16 +26,11 @@ export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
-  const initials = (user?.name || 'SA')
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+  const initials = (user?.employeeId || 'SA').slice(0, 2).toUpperCase()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setAnchorEl(null)
-    logout()
+    await logout()
     void navigate(ROUTES.login, { replace: true })
   }
 
@@ -92,9 +87,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
           <MenuItem disabled>
-            <Typography variant="body2">{user?.email}</Typography>
+            <Typography variant="body2">{user?.employeeId}</Typography>
           </MenuItem>
-          <MenuItem onClick={handleLogout}>
+          <MenuItem onClick={() => void handleLogout()}>
             <ListItemIcon>
               <LogoutIcon fontSize="small" />
             </ListItemIcon>

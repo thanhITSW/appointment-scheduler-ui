@@ -19,11 +19,11 @@ import { useServiceBays } from '../hooks/queries/useServiceBays'
 import { useTechnicians } from '../hooks/queries/useTechnicians'
 import { t } from '../i18n'
 import type { Appointment } from '../types'
-import { formatTime, isSameDay } from '../utils/date'
+import { appointmentStartIso, formatTime, isSameDay } from '../utils/date'
 
 interface StatCardProps {
   title: string
-  value: number
+  value: number | string
   icon: ReactNode
   accent: string
 }
@@ -65,46 +65,42 @@ function StatCard({ title, value, icon, accent }: StatCardProps) {
 }
 
 export function DashboardPage() {
-  const appointmentsQuery = useAppointments()
+  const today = dayjs().format('YYYY-MM-DD')
+  const appointmentsQuery = useAppointments({
+    date: today,
+    size: 100,
+    sort: 'startTime,asc',
+  })
   const techniciansQuery = useTechnicians()
   const baysQuery = useServiceBays()
 
-  const isLoading =
-    appointmentsQuery.isLoading ||
-    techniciansQuery.isLoading ||
-    baysQuery.isLoading
-  const isError =
-    appointmentsQuery.isError || techniciansQuery.isError || baysQuery.isError
-
-  if (isLoading) return <Loading />
-  if (isError) {
-    return (
-      <ErrorState
-        onRetry={() => {
-          void appointmentsQuery.refetch()
-          void techniciansQuery.refetch()
-          void baysQuery.refetch()
-        }}
-      />
-    )
+  if (appointmentsQuery.isLoading) return <Loading />
+  if (appointmentsQuery.isError) {
+    return <ErrorState onRetry={() => void appointmentsQuery.refetch()} />
   }
 
   const appointments = appointmentsQuery.data ?? []
-  const todayAppointments = appointments.filter((item) => isSameDay(item.startTime))
+  const todayAppointments = appointments.filter((item) =>
+    isSameDay(item.appointmentDate),
+  )
   const completedToday = todayAppointments.filter(
-    (item) => item.status === 'completed',
+    (item) => item.status === 'COMPLETED',
   ).length
-  const availableTechnicians =
-    techniciansQuery.data?.filter((item) => item.available).length ?? 0
-  const availableBays =
-    baysQuery.data?.filter((item) => item.available).length ?? 0
+
+  const availableTechnicians = techniciansQuery.isSuccess
+    ? techniciansQuery.data.filter((item) => item.status === 'AVAILABLE').length
+    : '—'
+  const availableBays = baysQuery.isSuccess
+    ? baysQuery.data.filter((item) => item.status === 'AVAILABLE').length
+    : '—'
 
   const upcoming = [...appointments]
-    .filter(
-      (item) =>
-        item.status === 'scheduled' || item.status === 'in_progress',
+    .filter((item) => item.status === 'PENDING' || item.status === 'CONFIRMED')
+    .sort(
+      (a, b) =>
+        dayjs(appointmentStartIso(a)).valueOf() -
+        dayjs(appointmentStartIso(b)).valueOf(),
     )
-    .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf())
     .slice(0, 8)
 
   const columns: AppTableColumn<Appointment>[] = [
@@ -121,7 +117,7 @@ export function DashboardPage() {
     {
       id: 'vehicle',
       label: t('dashboard.columns.vehicle'),
-      render: (row) => row.vehicleLabel,
+      render: (row) => row.vehicleLicensePlate,
     },
     {
       id: 'technician',
@@ -179,11 +175,7 @@ export function DashboardPage() {
       <Typography variant="h6" sx={{ mb: 1.5 }}>
         {t('dashboard.upcoming')}
       </Typography>
-      <AppTable
-        columns={columns}
-        rows={upcoming}
-        getRowId={(row) => row.id}
-      />
+      <AppTable columns={columns} rows={upcoming} getRowId={(row) => String(row.id)} />
     </Box>
   )
 }

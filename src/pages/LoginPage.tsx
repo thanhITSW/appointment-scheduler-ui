@@ -10,10 +10,11 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 
 import { useSnackbar } from '../components/common/snackbarContext'
-import { ROUTES } from '../constants'
+import { DEMO_CREDENTIALS, ROUTES } from '../constants'
 import { useAuth } from '../hooks/authContext'
 import { t } from '../i18n'
 import { loginSchema, type LoginFormValues } from '../schemas/appointment.schema'
+import { getApiErrorMessage } from '../utils/apiError'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -30,8 +31,8 @@ export function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'advisor@dealership.com',
-      password: 'password',
+      employeeId: DEMO_CREDENTIALS.employeeId,
+      password: DEMO_CREDENTIALS.password,
     },
   })
 
@@ -41,10 +42,7 @@ export function LoginPage() {
       showSnackbar(t('login.success'), 'success')
       void navigate(from, { replace: true })
     } catch (error) {
-      showSnackbar(
-        error instanceof Error ? error.message : t('login.error'),
-        'error',
-      )
+      showSnackbar(getApiErrorMessage(error, t('login.error')), 'error')
     }
   })
 
@@ -95,16 +93,15 @@ export function LoginPage() {
           </Box>
 
           <Controller
-            name="email"
+            name="employeeId"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label={t('login.email')}
-                type="email"
-                autoComplete="email"
-                error={Boolean(errors.email)}
-                helperText={errors.email?.message}
+                label={t('login.employeeId')}
+                autoComplete="username"
+                error={Boolean(errors.employeeId)}
+                helperText={errors.employeeId?.message}
                 fullWidth
               />
             )}

@@ -1,19 +1,12 @@
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 
 import { AUTH_STORAGE_KEY } from '../constants'
-import { login as loginRequest } from '../services/auth.service'
-import type { AuthUser, LoginRequest } from '../types'
-import { AuthContext } from './authContext'
-
-interface AuthSession {
-  token: string
-  user: AuthUser
-}
+import {
+  login as loginRequest,
+  logout as logoutRequest,
+} from '../services/auth.service'
+import type { LoginRequest } from '../types'
+import { AuthContext, type AuthSession } from './authContext'
 
 function readSession(): AuthSession | null {
   try {
@@ -30,12 +23,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (payload: LoginRequest) => {
     const result = await loginRequest(payload)
-    const next: AuthSession = { token: result.token, user: result.user }
+    const authenticated =
+      result.authenticated === true || result.isAuthenticated === true
+    if (!authenticated || !result.jwtTokenDto?.token) {
+      throw new Error('Login failed')
+    }
+    const jwt = result.jwtTokenDto
+    const next: AuthSession = {
+      token: jwt.token,
+      refreshToken: jwt.refreshToken,
+      expiredTime: jwt.expiredTime,
+      user: {
+        userId: jwt.userId,
+        employeeId: jwt.employeeId,
+        username: jwt.username,
+      },
+    }
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
     setSession(next)
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await logoutRequest()
+    } catch {
+      // Still clear local session if API logout fails
+    }
     localStorage.removeItem(AUTH_STORAGE_KEY)
     setSession(null)
   }, [])

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -11,10 +12,15 @@ import Typography from '@mui/material/Typography'
 import { ErrorState } from '../components/common/ErrorState'
 import { Loading } from '../components/common/Loading'
 import { StatusChip } from '../components/common/StatusChip'
-import { ROUTES } from '../constants'
+import { MASTER_STALE_TIME, ROUTES } from '../constants'
 import { useAppointment } from '../hooks/queries/useAppointments'
 import { t } from '../i18n'
-import { formatDateTime } from '../utils/date'
+import { getCustomer } from '../services/customer.service'
+import { getVehiclesByCustomer } from '../services/vehicle.service'
+import {
+  formatAppointmentEnd,
+  formatAppointmentStart,
+} from '../utils/date'
 
 function DetailItem({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -33,6 +39,22 @@ export function AppointmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data, isLoading, isError, refetch, error } = useAppointment(id)
 
+  const customerQuery = useQuery({
+    queryKey: ['customer', data?.customerId],
+    queryFn: () => getCustomer(data!.customerId),
+    enabled: Boolean(data?.customerId),
+    staleTime: MASTER_STALE_TIME,
+    retry: false,
+  })
+
+  const vehiclesQuery = useQuery({
+    queryKey: ['vehicles', data?.customerId],
+    queryFn: () => getVehiclesByCustomer(data!.customerId),
+    enabled: Boolean(data?.customerId),
+    staleTime: MASTER_STALE_TIME,
+    retry: false,
+  })
+
   if (isLoading) return <Loading />
   if (isError || !data) {
     return (
@@ -42,6 +64,10 @@ export function AppointmentDetailPage() {
       />
     )
   }
+
+  const vin =
+    vehiclesQuery.data?.find((item) => item.id === data.vehicleId)?.vin ?? '—'
+  const phone = customerQuery.data?.phone ?? '—'
 
   return (
     <Box sx={{ maxWidth: 900 }}>
@@ -77,7 +103,10 @@ export function AppointmentDetailPage() {
             <DetailItem label={t('detail.appointmentId')} value={data.id} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.status')} value={<StatusChip status={data.status} />} />
+            <DetailItem
+              label={t('detail.status')}
+              value={<StatusChip status={data.status} />}
+            />
           </Grid>
           <Grid size={12}>
             <Divider />
@@ -86,33 +115,45 @@ export function AppointmentDetailPage() {
             <DetailItem label={t('detail.customer')} value={data.customerName} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.phone')} value={data.customerPhone} />
+            <DetailItem label={t('detail.phone')} value={phone} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.vehicle')} value={data.vehicleLabel} />
+            <DetailItem
+              label={t('detail.vehicle')}
+              value={data.vehicleLicensePlate}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.vin')} value={data.vin} />
+            <DetailItem label={t('detail.vin')} value={vin} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.serviceType')} value={data.serviceTypeName} />
+            <DetailItem
+              label={t('detail.serviceType')}
+              value={data.serviceTypeName}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.technician')} value={data.technicianName} />
+            <DetailItem
+              label={t('detail.technician')}
+              value={data.technicianName}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailItem label={t('detail.serviceBay')} value={data.serviceBayName} />
+            <DetailItem
+              label={t('detail.serviceBay')}
+              value={data.serviceBayName}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <DetailItem
               label={t('detail.startTime')}
-              value={formatDateTime(data.startTime)}
+              value={formatAppointmentStart(data)}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <DetailItem
               label={t('detail.endTime')}
-              value={formatDateTime(data.endTime)}
+              value={formatAppointmentEnd(data)}
             />
           </Grid>
         </Grid>

@@ -18,28 +18,33 @@ import { Loading } from '../components/common/Loading'
 import { StatusChip } from '../components/common/StatusChip'
 import { APPOINTMENT_STATUSES, ROUTES } from '../constants'
 import { useAppointments } from '../hooks/queries/useAppointments'
-import en from '../i18n/en'
-import { t } from '../i18n'
+import { getDictionary, t } from '../i18n'
 import type { Appointment, AppointmentStatus } from '../types'
-import { formatDateTime } from '../utils/date'
+import {
+  formatAppointmentEnd,
+  formatAppointmentStart,
+} from '../utils/date'
 
 export function AppointmentListPage() {
-  const { data, isLoading, isError, refetch } = useAppointments()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<AppointmentStatus | 'all'>('all')
   const [date, setDate] = useState<dayjs.Dayjs | null>(null)
 
+  const { data, isLoading, isError, refetch } = useAppointments({
+    date: date ? date.format('YYYY-MM-DD') : undefined,
+    status: status === 'all' ? undefined : status,
+    size: 100,
+    sort: 'appointmentDate,desc',
+  })
+
   const filtered = useMemo(() => {
     const rows = data ?? []
-    return rows.filter((item) => {
-      const matchesSearch = item.customerName
-        .toLowerCase()
-        .includes(search.trim().toLowerCase())
-      const matchesStatus = status === 'all' || item.status === status
-      const matchesDate = !date || dayjs(item.startTime).isSame(date, 'day')
-      return matchesSearch && matchesStatus && matchesDate
-    })
-  }, [data, search, status, date])
+    const keyword = search.trim().toLowerCase()
+    if (!keyword) return rows
+    return rows.filter((item) =>
+      item.customerName.toLowerCase().includes(keyword),
+    )
+  }, [data, search])
 
   const columns: AppTableColumn<Appointment>[] = [
     {
@@ -51,8 +56,8 @@ export function AppointmentListPage() {
     {
       id: 'vehicle',
       label: t('appointments.columns.vehicle'),
-      minWidth: 180,
-      render: (row) => row.vehicleLabel,
+      minWidth: 120,
+      render: (row) => row.vehicleLicensePlate,
     },
     {
       id: 'service',
@@ -73,13 +78,13 @@ export function AppointmentListPage() {
       id: 'start',
       label: t('appointments.columns.start'),
       minWidth: 150,
-      render: (row) => formatDateTime(row.startTime),
+      render: (row) => formatAppointmentStart(row),
     },
     {
       id: 'end',
       label: t('appointments.columns.end'),
       minWidth: 150,
-      render: (row) => formatDateTime(row.endTime),
+      render: (row) => formatAppointmentEnd(row),
     },
     {
       id: 'status',
@@ -160,7 +165,7 @@ export function AppointmentListPage() {
             <MenuItem value="all">{t('appointments.allStatuses')}</MenuItem>
             {APPOINTMENT_STATUSES.map((item) => (
               <MenuItem key={item} value={item}>
-                {en.status[item]}
+                {getDictionary().status[item]}
               </MenuItem>
             ))}
           </Select>
@@ -176,7 +181,11 @@ export function AppointmentListPage() {
         />
       </Box>
 
-      <AppTable columns={columns} rows={filtered} getRowId={(row) => row.id} />
+      <AppTable
+        columns={columns}
+        rows={filtered}
+        getRowId={(row) => String(row.id)}
+      />
     </Box>
   )
 }

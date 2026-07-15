@@ -1,3 +1,5 @@
+import { errorMessages } from './errors'
+
 const en = {
   app: {
     name: 'Dealership Service Scheduler',
@@ -54,6 +56,17 @@ const en = {
       action: 'Action',
     },
   },
+  login: {
+    title: 'Sign in',
+    subtitle: 'Service Advisor access',
+    employeeId: 'Employee ID',
+    password: 'Password',
+    submit: 'Sign in',
+    hint: 'Demo: adv01 / Admin@123',
+    success: 'Welcome back',
+    error: 'Invalid employee ID or password',
+    logout: 'Sign out',
+  },
   create: {
     title: 'Create Appointment',
     customerMode: 'Customer Type',
@@ -61,6 +74,8 @@ const en = {
     newCustomer: 'New Customer',
     customer: 'Customer',
     customerName: 'Customer Name',
+    firstName: 'First Name',
+    lastName: 'Last Name',
     customerPhone: 'Phone',
     customerEmail: 'Email (optional)',
     vehicle: 'Vehicle',
@@ -88,17 +103,7 @@ const en = {
     selectCustomerFirst: 'Select a customer first',
     newCustomerSection: 'New Customer Details',
     newVehicleSection: 'Vehicle Details',
-  },
-  login: {
-    title: 'Sign in',
-    subtitle: 'Service Advisor access',
-    email: 'Email',
-    password: 'Password',
-    submit: 'Sign in',
-    hint: 'Demo: advisor@dealership.com / password',
-    success: 'Welcome back',
-    error: 'Invalid email or password',
-    logout: 'Sign out',
+    searchCustomer: 'Search by name, phone, or email',
   },
   detail: {
     title: 'Appointment Detail',
@@ -116,19 +121,20 @@ const en = {
     notFound: 'Appointment not found',
   },
   status: {
-    scheduled: 'Scheduled',
-    in_progress: 'In Progress',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    no_show: 'No Show',
+    PENDING: 'Pending',
+    CONFIRMED: 'Confirmed',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
   },
-  validation: {
+  /** UI form field validation (not backend messageCode) */
+  form: {
     required: 'This field is required',
     pastDate: 'Cannot select a past date',
     email: 'Enter a valid email',
     year: 'Enter a valid vehicle year',
     vin: 'VIN must be 11–17 characters',
   },
+  ...errorMessages,
 } as const
 
 export type TranslationTree = typeof en

@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 
 import { MASTER_STALE_TIME } from '../../constants'
 import { queryKeys } from '../../constants/queryKeys'
-import { getCustomers } from '../../services/customer.service'
+import { searchCustomers } from '../../services/customer.service'
 
-export function useCustomers() {
+export function useCustomers(keyword = '') {
   return useQuery({
-    queryKey: queryKeys.customers.all,
-    queryFn: getCustomers,
+    queryKey: [...queryKeys.customers.all, keyword],
+    queryFn: () => searchCustomers(keyword),
     staleTime: MASTER_STALE_TIME,
   })
 }

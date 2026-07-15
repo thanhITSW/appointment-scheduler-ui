@@ -1,15 +1,22 @@
-import { delay, vehicles } from '../mocks/db'
-import type { Vehicle } from '../types'
-import { isStubMode } from '../utils'
+import type { CreateVehicleRequest, Vehicle } from '../types'
 import { api } from './axios'
 
 export async function getVehiclesByCustomer(
-  customerId: string,
+  customerId: number,
 ): Promise<Vehicle[]> {
-  if (isStubMode()) {
-    await delay()
-    return vehicles.filter((vehicle) => vehicle.customerId === customerId)
-  }
-  const { data } = await api.get<Vehicle[]>(`/customers/${customerId}/vehicles`)
+  const { data } = await api.get<Vehicle[]>(
+    `/api/v1/public/customers/${customerId}/vehicles`,
+  )
+  return data
+}
+
+export async function createVehicle(
+  customerId: number,
+  payload: CreateVehicleRequest,
+): Promise<Vehicle> {
+  const { data } = await api.post<Vehicle>(
+    `/api/v1/public/customers/${customerId}/vehicles`,
+    payload,
+  )
   return data
 }

@@ -1,71 +1,132 @@
 # Dealership Service Scheduler
 
-React UI for Service Advisors to create and manage vehicle service appointments, check technician/bay availability, and confirm bookings.
+React SPA for **Service Advisors** — view appointments, book service visits, integrated with [Appointment API](../appointment-api/README.md).
 
-## Stack
+**System design:** [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) · **API contract:** [appointment-api/docs/API.md](../appointment-api/docs/API.md)
 
-- React 19 + TypeScript + Vite
-- Material UI + MUI X Date Pickers
-- React Router DOM
-- TanStack Query + Axios
-- React Hook Form + Zod
-- Dayjs
+---
 
-## Getting started
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| UI | React 19 + TypeScript |
+| Build | Vite 8 |
+| Components | Material UI 9 + MUI X Date Pickers |
+| Routing | React Router DOM 7 |
+| Server state | TanStack Query 5 |
+| HTTP | Axios |
+| Forms | React Hook Form + Zod |
+| Dates | Dayjs |
+
+---
+
+## Features
+
+- Staff login (`employeeId` + password) with JWT session
+- Dashboard — today's appointments, stats, technician/bay counts
+- Appointment list — filter by date/status, search by customer name
+- Create appointment — existing customer (search) or new customer + vehicle inline
+- Availability preview before booking (technician + bay names)
+- Appointment detail — status, resources, customer phone, VIN
+
+---
+
+## Quick start
+
+### 1. Backend
 
 ```bash
+cd ../appointment-api
+cp .env.example .env
+docker compose up -d
+mvn spring-boot:run
+```
+
+### 2. Frontend
+
+```bash
+cp .env.example .env
+# VITE_API_BASE_URL=http://localhost:8080
+
 npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env`:
+- UI: http://localhost:5173  
+- Swagger: http://localhost:8080/swagger  
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API base URL |
-| `VITE_USE_STUBS` | `true` (default) uses in-memory mock data; set `false` to call the real API |
+### Demo login
 
-## Scripts
+| employeeId | Role | Password |
+|------------|------|----------|
+| `adv01` | ADVISOR | `Admin@123` |
 
-- `npm run dev` – start Vite dev server
-- `npm run build` – typecheck + production build
-- `npm run preview` – preview production build
+---
 
 ## Routes
 
 | Path | Page |
 |------|------|
+| `/login` | Login |
 | `/` | Dashboard |
 | `/appointments` | Appointment list |
 | `/appointments/new` | Create appointment |
 | `/appointments/:id` | Appointment detail |
 
-## Project layout
+---
 
+## API map (screens)
+
+| Screen | APIs |
+|--------|------|
+| Login | `POST /api/v1/public/auth/login` |
+| Dashboard | `GET /api/v1/private/appointments`, technicians, bays |
+| Appointment list | `GET /api/v1/private/appointments` |
+| Create | public customers/vehicles + check-availability + create |
+| Detail | `GET /api/v1/private/appointments/{id}` + customer/vehicle |
+
+Booking uses **public** endpoints; staff list/detail use **private** endpoints with Bearer token.
+
+---
+
+## Service layer
+
+HTTP calls live in `src/services/` (`appointment`, `auth`, `customer`, `vehicle`, …), wrapped by TanStack Query hooks in `src/hooks/`.
+
+---
+
+## Scripts
+
+```bash
+npm run dev      # development server
+npm run build    # production build
+npm run preview  # preview production build
+npm run lint     # oxlint
 ```
-src/
-  app/           App, router, providers
-  components/    common + layout
-  hooks/         queries, mutations, useCheckAvailability
-  pages/         Dashboard, List, Create, Detail
-  services/      Axios API clients (stub-aware)
-  schemas/       Zod form schemas
-  types/         Shared TypeScript types
-  mocks/         In-memory stub store
-  i18n/          English strings + t() helper
-  theme/         MUI theme
-```
 
-## Auth
+---
 
-Protected routes redirect to `/login`. Demo credentials (stub mode):
+## Environment
 
-- Email: `advisor@dealership.com`
-- Password: `password`
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_API_BASE_URL` | `http://localhost:8080` | Appointment API origin |
 
-Session is stored in `localStorage` under `dss.auth`. Sign out from the avatar menu in the header.
+---
 
-## Create appointment – customer modes
+## Challenge submission
 
-- **Existing Customer**: pick customer → pick vehicle for that customer
-- **New Customer**: enter customer + vehicle details; confirming the appointment creates both in stub store (and they appear in subsequent searches)
+| Requirement | Deliverable |
+|-------------|-------------|
+| Scenario | Dealership Appointment Scheduling |
+| System design | [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) |
+| Frontend service layer | `src/services/*` |
+| Backend + tests | [`appointment-api`](../appointment-api/) — `mvn test` |
+| Video walkthrough | Record locally (login → dashboard → create → detail) |
+
+---
+
+## License
+
+Internal / challenge project.

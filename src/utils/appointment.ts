@@ -1,51 +1,56 @@
 import type { CreateAppointmentFormValues } from '../schemas/appointment.schema'
-import type { AvailabilityRequest, CreateAppointmentRequest } from '../types'
+import type {
+  AvailabilityRequest,
+  CreateAppointmentRequest,
+  CreateCustomerRequest,
+  CreateVehicleRequest,
+} from '../types'
 
 export function toAvailabilityRequest(
   values: CreateAppointmentFormValues,
 ): AvailabilityRequest {
-  const shared = {
-    serviceTypeId: values.serviceTypeId,
-    dealershipId: values.dealershipId,
-    preferredDate: values.preferredDate,
-    preferredTime: values.preferredTime,
-  }
-
-  if (values.customerMode === 'existing') {
-    return {
-      customerMode: 'existing',
-      customerId: values.customerId,
-      vehicleId: values.vehicleId,
-      ...shared,
-    }
-  }
-
   return {
-    customerMode: 'new',
-    newCustomer: {
-      name: values.newCustomerName,
-      phone: values.newCustomerPhone,
-      email: values.newCustomerEmail || undefined,
-    },
-    newVehicle: {
-      make: values.vehicleMake,
-      model: values.vehicleModel,
-      year: Number(values.vehicleYear),
-      licensePlate: values.vehicleLicensePlate,
-      vin: values.vehicleVin,
-    },
-    ...shared,
+    dealershipId: values.dealershipId,
+    serviceTypeId: values.serviceTypeId,
+    appointmentDate: values.preferredDate,
+    startTime: values.preferredTime,
   }
 }
 
 export function toCreateAppointmentRequest(
+  customerId: number,
+  vehicleId: number,
   values: CreateAppointmentFormValues,
-  technicianId: string,
-  serviceBayId: string,
 ): CreateAppointmentRequest {
   return {
-    ...toAvailabilityRequest(values),
-    technicianId,
-    serviceBayId,
+    customerId,
+    vehicleId,
+    serviceTypeId: values.serviceTypeId,
+    dealershipId: values.dealershipId,
+    appointmentDate: values.preferredDate,
+    startTime: values.preferredTime,
+  }
+}
+
+export function toCreateCustomerRequest(
+  values: Extract<CreateAppointmentFormValues, { customerMode: 'new' }>,
+): CreateCustomerRequest {
+  return {
+    firstName: values.firstName,
+    lastName: values.lastName,
+    phone: values.phone,
+    email: values.email || undefined,
+  }
+}
+
+export function toCreateVehicleRequest(
+  values: Extract<CreateAppointmentFormValues, { customerMode: 'new' }>,
+): CreateVehicleRequest {
+  return {
+    make: values.vehicleMake,
+    model: values.vehicleModel,
+    year: Number(values.vehicleYear),
+    licensePlate: values.vehicleLicensePlate,
+    vin: values.vehicleVin,
   }
 }

@@ -1,134 +1,166 @@
 export type AppointmentStatus =
-  | 'scheduled'
-  | 'in_progress'
-  | 'completed'
-  | 'cancelled'
-  | 'no_show'
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'COMPLETED'
+  | 'CANCELLED'
 
+export type TechnicianStatus = 'AVAILABLE' | 'OFF' | 'BUSY'
+export type ServiceBayStatus = 'AVAILABLE' | 'OFF' | 'BUSY'
+export type UserRole = 'ADVISOR' | 'TECHNICIAN' | 'MANAGER' | 'ADMIN'
 export type CustomerMode = 'existing' | 'new'
 
 export interface Customer {
-  id: string
-  name: string
+  id: number
+  firstName: string
+  lastName: string
   phone: string
-  email?: string
+  email?: string | null
 }
 
 export interface Vehicle {
-  id: string
-  customerId: string
+  id: number
+  customerId: number
+  vin: string
+  licensePlate: string
   make: string
   model: string
   year: number
-  licensePlate: string
-  vin: string
-}
-
-export interface NewCustomerInput {
-  name: string
-  phone: string
-  email?: string
-}
-
-export interface NewVehicleInput {
-  make: string
-  model: string
-  year: number
-  licensePlate: string
-  vin: string
 }
 
 export interface ServiceType {
-  id: string
+  id: number
   name: string
   durationMinutes: number
+  requiredSkillIds?: number[]
+  requiredSkillCodes?: string[]
 }
 
 export interface Dealership {
-  id: string
+  id: number
   name: string
   address: string
 }
 
 export interface Technician {
-  id: string
+  id: number
   name: string
-  available: boolean
+  employeeCode?: string
+  status: TechnicianStatus
+  skillIds?: number[]
 }
 
 export interface ServiceBay {
-  id: string
+  id: number
   name: string
-  available: boolean
+  status: ServiceBayStatus
 }
 
 export interface Appointment {
-  id: string
-  customerId: string
+  id: number
+  customerId: number
   customerName: string
-  customerPhone: string
-  vehicleId: string
-  vehicleLabel: string
-  vin: string
-  serviceTypeId: string
-  serviceTypeName: string
-  dealershipId: string
-  dealershipName: string
-  technicianId: string
+  vehicleId: number
+  vehicleLicensePlate: string
+  technicianId: number
   technicianName: string
-  serviceBayId: string
+  serviceBayId: number
   serviceBayName: string
+  dealershipId: number
+  dealershipName: string
+  serviceTypeId: number
+  serviceTypeName: string
+  appointmentDate: string
   startTime: string
   endTime: string
   status: AppointmentStatus
 }
 
 export interface AvailabilityRequest {
-  customerMode: CustomerMode
-  customerId?: string
-  vehicleId?: string
-  newCustomer?: NewCustomerInput
-  newVehicle?: NewVehicleInput
-  serviceTypeId: string
-  dealershipId: string
-  preferredDate: string
-  preferredTime: string
+  dealershipId: number
+  serviceTypeId: number
+  appointmentDate: string
+  startTime: string
 }
 
-export interface AvailabilitySuccess {
-  available: true
-  technician: Technician
-  serviceBay: ServiceBay
-  durationMinutes: number
-  estimatedEndTime: string
+export interface AvailabilityResponse {
+  available: boolean
+  technicianName?: string | null
+  serviceBayName?: string | null
+  duration?: number | null
+  endTime?: string | null
+  message?: string | null
+  suggestedTimes?: string[] | null
 }
 
-export interface AvailabilityFailure {
-  available: false
-  message: string
-  suggestedTimes: string[]
+export interface CreateAppointmentRequest {
+  customerId: number
+  vehicleId: number
+  serviceTypeId: number
+  dealershipId: number
+  appointmentDate: string
+  startTime: string
 }
 
-export type AvailabilityResponse = AvailabilitySuccess | AvailabilityFailure
+export interface CreateCustomerRequest {
+  firstName: string
+  lastName: string
+  phone: string
+  email?: string
+}
 
-export interface CreateAppointmentRequest extends AvailabilityRequest {
-  technicianId: string
-  serviceBayId: string
+export interface CreateVehicleRequest {
+  vin: string
+  licensePlate: string
+  make: string
+  model: string
+  year: number
+}
+
+export interface AppointmentListParams {
+  date?: string
+  customerId?: number
+  status?: AppointmentStatus
+  page?: number
+  size?: number
+  sort?: string
 }
 
 export interface AuthUser {
-  id: string
-  name: string
-  email: string
-  role: string
+  userId: number
+  employeeId: string
+  username: string
 }
 
 export interface LoginRequest {
-  email: string
+  employeeId: string
   password: string
 }
 
-export interface LoginResponse {
+export interface JwtTokenDto {
   token: string
-  user: AuthUser
+  refreshToken: string
+  expiredTime: string
+  username: string
+  employeeId: string
+  userId: number
+  sessionId: string
+}
+
+export interface LoginResponse {
+  /** Backend Jackson may serialize `isAuthenticated` as `authenticated` */
+  authenticated?: boolean
+  isAuthenticated?: boolean
+  jwtTokenDto: JwtTokenDto
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string
+  refreshToken: string
+  tokenType: string
+  expiresIn: number
+}
+
+export interface ApiErrorBody {
+  messageCode?: string
+  message?: string
 }

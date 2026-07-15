@@ -13,10 +13,10 @@ export function useCreateAppointment() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all })
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.vehicles.byCustomer(appointment.customerId),
+        queryKey: queryKeys.vehicles.byCustomer(String(appointment.customerId)),
       })
       queryClient.setQueryData(
-        queryKeys.appointments.detail(appointment.id),
+        queryKeys.appointments.detail(String(appointment.id)),
         appointment,
       )
     },

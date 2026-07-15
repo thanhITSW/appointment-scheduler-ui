@@ -1,6 +1,6 @@
 import Chip from '@mui/material/Chip'
 
-import en from '../../i18n/en'
+import { getDictionary } from '../../i18n'
 import { statusColors } from '../../theme'
 import type { AppointmentStatus } from '../../types'
 
@@ -9,10 +9,11 @@ interface StatusChipProps {
 }
 
 export function StatusChip({ status }: StatusChipProps) {
+  const dict = getDictionary()
   return (
     <Chip
       size="small"
-      label={en.status[status]}
+      label={dict.status[status] ?? status}
       color={statusColors[status] ?? 'default'}
       variant="filled"
     />

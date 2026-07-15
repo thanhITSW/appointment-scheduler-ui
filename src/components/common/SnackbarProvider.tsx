@@ -32,7 +32,8 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
         open={state.open}
         autoHideDuration={4000}
         onClose={() => setState((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        sx={{ top: { xs: 16, sm: 24 }, right: { xs: 16, sm: 24 } }}
       >
         <Alert
           severity={state.severity}

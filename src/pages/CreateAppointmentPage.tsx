@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,7 +7,6 @@ import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
 import InputLabel from '@mui/material/InputLabel'
@@ -39,17 +38,23 @@ import {
   createAppointmentSchema,
   type CreateAppointmentFormValues,
 } from '../schemas/appointment.schema'
+import { createCustomer } from '../services/customer.service'
+import { createVehicle } from '../services/vehicle.service'
 import type { AvailabilityResponse, Customer, CustomerMode } from '../types'
 import {
   toAvailabilityRequest,
   toCreateAppointmentRequest,
+  toCreateCustomerRequest,
+  toCreateVehicleRequest,
 } from '../utils/appointment'
-import { vehicleLabel } from '../utils'
+import { getApiErrorMessage } from '../utils/apiError'
+import { customerLabel, vehicleLabel } from '../utils'
 
 export function CreateAppointmentPage() {
   const navigate = useNavigate()
   const { showSnackbar } = useSnackbar()
-  const customersQuery = useCustomers()
+  const [customerKeyword, setCustomerKeyword] = useState('')
+  const customersQuery = useCustomers(customerKeyword)
   const serviceTypesQuery = useServiceTypes()
   const dealershipsQuery = useDealerships()
   const checkAvailability = useCheckAvailability()
@@ -72,18 +77,19 @@ export function CreateAppointmentPage() {
     resolver: zodResolver(createAppointmentSchema),
     defaultValues: {
       customerMode: 'existing',
-      customerId: '',
-      vehicleId: '',
-      newCustomerName: '',
-      newCustomerPhone: '',
-      newCustomerEmail: '',
+      customerId: undefined,
+      vehicleId: undefined,
+      firstName: '',
+      lastName: '',
+      phone: '',
+      email: '',
       vehicleMake: '',
       vehicleModel: '',
       vehicleYear: String(dayjs().year()),
       vehicleLicensePlate: '',
       vehicleVin: '',
-      serviceTypeId: '',
-      dealershipId: '',
+      serviceTypeId: undefined as unknown as number,
+      dealershipId: undefined as unknown as number,
       preferredDate: dayjs().format('YYYY-MM-DD'),
       preferredTime: '09:00',
     },
@@ -92,31 +98,35 @@ export function CreateAppointmentPage() {
   const customerMode = watch('customerMode')
   const customerId = watch('customerId')
   const vehiclesQuery = useVehicles(
-    customerMode === 'existing' && customerId ? customerId : undefined,
+    customerMode === 'existing' && typeof customerId === 'number'
+      ? customerId
+      : undefined,
   )
 
   useEffect(() => {
     if (customerMode === 'existing') {
-      setValue('vehicleId', '')
+      setValue('vehicleId', undefined as unknown as number)
     }
     setAvailability(null)
   }, [customerId, customerMode, setValue])
 
   const masterLoading =
-    customersQuery.isLoading ||
-    serviceTypesQuery.isLoading ||
-    dealershipsQuery.isLoading
-  const masterError =
-    customersQuery.isError ||
-    serviceTypesQuery.isError ||
-    dealershipsQuery.isError
+    serviceTypesQuery.isLoading || dealershipsQuery.isLoading
+  const masterError = serviceTypesQuery.isError || dealershipsQuery.isError
+
+  const customers = useMemo(
+    () => customersQuery.data ?? [],
+    [customersQuery.data],
+  )
+  const serviceTypes = serviceTypesQuery.data ?? []
+  const dealerships = dealershipsQuery.data ?? []
+  const vehicles = vehiclesQuery.data ?? []
 
   if (masterLoading) return <Loading />
   if (masterError) {
     return (
       <ErrorState
         onRetry={() => {
-          void customersQuery.refetch()
           void serviceTypesQuery.refetch()
           void dealershipsQuery.refetch()
         }}
@@ -124,27 +134,48 @@ export function CreateAppointmentPage() {
     )
   }
 
-  const customers = customersQuery.data ?? []
-  const serviceTypes = serviceTypesQuery.data ?? []
-  const dealerships = dealershipsQuery.data ?? []
-  const vehicles = vehiclesQuery.data ?? []
-
   const onModeChange = (_: unknown, value: CustomerMode | null) => {
     if (!value) return
-    reset({
-      ...getValues(),
-      customerMode: value,
-      customerId: '',
-      vehicleId: '',
-      newCustomerName: '',
-      newCustomerPhone: '',
-      newCustomerEmail: '',
-      vehicleMake: '',
-      vehicleModel: '',
-      vehicleYear: String(dayjs().year()),
-      vehicleLicensePlate: '',
-      vehicleVin: '',
-    })
+    const shared = {
+      serviceTypeId: getValues('serviceTypeId'),
+      dealershipId: getValues('dealershipId'),
+      preferredDate: getValues('preferredDate'),
+      preferredTime: getValues('preferredTime'),
+    }
+
+    if (value === 'existing') {
+      reset({
+        customerMode: 'existing',
+        customerId: undefined as unknown as number,
+        vehicleId: undefined as unknown as number,
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        vehicleMake: '',
+        vehicleModel: '',
+        vehicleYear: String(dayjs().year()),
+        vehicleLicensePlate: '',
+        vehicleVin: '',
+        ...shared,
+      })
+    } else {
+      reset({
+        customerMode: 'new',
+        customerId: undefined,
+        vehicleId: undefined,
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        vehicleMake: '',
+        vehicleModel: '',
+        vehicleYear: String(dayjs().year()),
+        vehicleLicensePlate: '',
+        vehicleVin: '',
+        ...shared,
+      })
+    }
     setAvailability(null)
   }
 
@@ -155,32 +186,38 @@ export function CreateAppointmentPage() {
       )
       setAvailability(result)
     } catch (error) {
-      showSnackbar(
-        error instanceof Error ? error.message : t('common.error'),
-        'error',
-      )
+      showSnackbar(getApiErrorMessage(error), 'error')
     }
   })
 
   const onConfirm = async () => {
-    if (!availability || !availability.available) return
+    if (!availability?.available) return
     const values = getValues()
     try {
+      let customerIdValue: number
+      let vehicleIdValue: number
+
+      if (values.customerMode === 'new') {
+        const customer = await createCustomer(toCreateCustomerRequest(values))
+        const vehicle = await createVehicle(
+          customer.id,
+          toCreateVehicleRequest(values),
+        )
+        customerIdValue = customer.id
+        vehicleIdValue = vehicle.id
+      } else {
+        customerIdValue = values.customerId
+        vehicleIdValue = values.vehicleId
+      }
+
       const appointment = await createAppointment.mutateAsync(
-        toCreateAppointmentRequest(
-          values,
-          availability.technician.id,
-          availability.serviceBay.id,
-        ),
+        toCreateAppointmentRequest(customerIdValue, vehicleIdValue, values),
       )
       showSnackbar(t('common.saveSuccess'), 'success')
       setConfirmOpen(false)
       void navigate(ROUTES.appointmentDetail(appointment.id))
     } catch (error) {
-      showSnackbar(
-        error instanceof Error ? error.message : t('common.saveError'),
-        'error',
-      )
+      showSnackbar(getApiErrorMessage(error, t('common.saveError')), 'error')
     }
   }
 
@@ -228,12 +265,19 @@ export function CreateAppointmentPage() {
                     <Autocomplete
                       options={customers}
                       value={selected}
-                      getOptionLabel={(option: Customer) => option.name}
-                      onChange={(_, value) => field.onChange(value?.id ?? '')}
+                      loading={customersQuery.isFetching}
+                      getOptionLabel={(option: Customer) =>
+                        `${customerLabel(option)} (${option.phone})`
+                      }
+                      onInputChange={(_, value, reason) => {
+                        if (reason === 'input') setCustomerKeyword(value)
+                      }}
+                      onChange={(_, value) => field.onChange(value?.id)}
                       renderInput={(params) => (
                         <TextField
                           {...params}
                           label={t('create.customer')}
+                          placeholder={t('create.searchCustomer')}
                           error={Boolean(
                             'customerId' in errors ? errors.customerId : false,
                           )}
@@ -261,11 +305,13 @@ export function CreateAppointmentPage() {
                   >
                     <InputLabel id="vehicle-label">{t('create.vehicle')}</InputLabel>
                     <Select
-                      {...field}
                       value={field.value ?? ''}
                       labelId="vehicle-label"
                       label={t('create.vehicle')}
-                      disabled={!customerId}
+                      disabled={typeof customerId !== 'number'}
+                      onChange={(event) =>
+                        field.onChange(Number(event.target.value))
+                      }
                     >
                       {vehicles.map((vehicle) => (
                         <MenuItem key={vehicle.id} value={vehicle.id}>
@@ -275,7 +321,9 @@ export function CreateAppointmentPage() {
                     </Select>
                     <FormHelperText>
                       {('vehicleId' in errors && errors.vehicleId?.message) ||
-                        (!customerId ? t('create.selectCustomerFirst') : ' ')}
+                        (typeof customerId !== 'number'
+                          ? t('create.selectCustomerFirst')
+                          : ' ')}
                     </FormHelperText>
                   </FormControl>
                 )}
@@ -294,20 +342,18 @@ export function CreateAppointmentPage() {
                 }}
               >
                 <Controller
-                  name="newCustomerName"
+                  name="firstName"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label={t('create.customerName')}
+                      label={t('create.firstName')}
                       error={Boolean(
-                        'newCustomerName' in errors
-                          ? errors.newCustomerName
-                          : false,
+                        'firstName' in errors ? errors.firstName : false,
                       )}
                       helperText={
-                        'newCustomerName' in errors
-                          ? errors.newCustomerName?.message
+                        'firstName' in errors
+                          ? errors.firstName?.message
                           : undefined
                       }
                       fullWidth
@@ -315,45 +361,51 @@ export function CreateAppointmentPage() {
                   )}
                 />
                 <Controller
-                  name="newCustomerPhone"
+                  name="lastName"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label={t('create.lastName')}
+                      error={Boolean(
+                        'lastName' in errors ? errors.lastName : false,
+                      )}
+                      helperText={
+                        'lastName' in errors
+                          ? errors.lastName?.message
+                          : undefined
+                      }
+                      fullWidth
+                    />
+                  )}
+                />
+                <Controller
+                  name="phone"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       label={t('create.customerPhone')}
-                      error={Boolean(
-                        'newCustomerPhone' in errors
-                          ? errors.newCustomerPhone
-                          : false,
-                      )}
+                      error={Boolean('phone' in errors ? errors.phone : false)}
                       helperText={
-                        'newCustomerPhone' in errors
-                          ? errors.newCustomerPhone?.message
-                          : undefined
+                        'phone' in errors ? errors.phone?.message : undefined
                       }
                       fullWidth
                     />
                   )}
                 />
                 <Controller
-                  name="newCustomerEmail"
+                  name="email"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       label={t('create.customerEmail')}
-                      error={Boolean(
-                        'newCustomerEmail' in errors
-                          ? errors.newCustomerEmail
-                          : false,
-                      )}
+                      error={Boolean('email' in errors ? errors.email : false)}
                       helperText={
-                        'newCustomerEmail' in errors
-                          ? errors.newCustomerEmail?.message
-                          : undefined
+                        'email' in errors ? errors.email?.message : undefined
                       }
                       fullWidth
-                      sx={{ gridColumn: { sm: '1 / -1' } }}
                     />
                   )}
                 />
@@ -369,104 +421,41 @@ export function CreateAppointmentPage() {
                   gap: 2,
                 }}
               >
-                <Controller
-                  name="vehicleMake"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={t('create.vehicleMake')}
-                      error={Boolean(
-                        'vehicleMake' in errors ? errors.vehicleMake : false,
-                      )}
-                      helperText={
-                        'vehicleMake' in errors
-                          ? errors.vehicleMake?.message
-                          : undefined
-                      }
-                      fullWidth
-                    />
-                  )}
-                />
-                <Controller
-                  name="vehicleModel"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={t('create.vehicleModel')}
-                      error={Boolean(
-                        'vehicleModel' in errors ? errors.vehicleModel : false,
-                      )}
-                      helperText={
-                        'vehicleModel' in errors
-                          ? errors.vehicleModel?.message
-                          : undefined
-                      }
-                      fullWidth
-                    />
-                  )}
-                />
-                <Controller
-                  name="vehicleYear"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={t('create.vehicleYear')}
-                      error={Boolean(
-                        'vehicleYear' in errors ? errors.vehicleYear : false,
-                      )}
-                      helperText={
-                        'vehicleYear' in errors
-                          ? errors.vehicleYear?.message
-                          : undefined
-                      }
-                      fullWidth
-                    />
-                  )}
-                />
-                <Controller
-                  name="vehicleLicensePlate"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={t('create.vehicleLicensePlate')}
-                      error={Boolean(
-                        'vehicleLicensePlate' in errors
-                          ? errors.vehicleLicensePlate
-                          : false,
-                      )}
-                      helperText={
-                        'vehicleLicensePlate' in errors
-                          ? errors.vehicleLicensePlate?.message
-                          : undefined
-                      }
-                      fullWidth
-                    />
-                  )}
-                />
-                <Controller
-                  name="vehicleVin"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={t('create.vehicleVin')}
-                      error={Boolean(
-                        'vehicleVin' in errors ? errors.vehicleVin : false,
-                      )}
-                      helperText={
-                        'vehicleVin' in errors
-                          ? errors.vehicleVin?.message
-                          : undefined
-                      }
-                      fullWidth
-                      sx={{ gridColumn: { sm: '1 / -1' } }}
-                    />
-                  )}
-                />
+                {(
+                  [
+                    ['vehicleMake', t('create.vehicleMake')],
+                    ['vehicleModel', t('create.vehicleModel')],
+                    ['vehicleYear', t('create.vehicleYear')],
+                    ['vehicleLicensePlate', t('create.vehicleLicensePlate')],
+                    ['vehicleVin', t('create.vehicleVin')],
+                  ] as const
+                ).map(([name, label]) => (
+                  <Controller
+                    key={name}
+                    name={name}
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label={label}
+                        error={Boolean(name in errors)}
+                        helperText={
+                          name in errors
+                            ? (errors as Record<string, { message?: string }>)[
+                                name
+                              ]?.message
+                            : undefined
+                        }
+                        fullWidth
+                        sx={
+                          name === 'vehicleVin'
+                            ? { gridColumn: { sm: '1 / -1' } }
+                            : undefined
+                        }
+                      />
+                    )}
+                  />
+                ))}
               </Box>
             </>
           )}
@@ -480,9 +469,10 @@ export function CreateAppointmentPage() {
                   {t('create.serviceType')}
                 </InputLabel>
                 <Select
-                  {...field}
+                  value={field.value ?? ''}
                   labelId="service-type-label"
                   label={t('create.serviceType')}
+                  onChange={(event) => field.onChange(Number(event.target.value))}
                 >
                   {serviceTypes.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
@@ -504,9 +494,10 @@ export function CreateAppointmentPage() {
                   {t('create.dealership')}
                 </InputLabel>
                 <Select
-                  {...field}
+                  value={field.value ?? ''}
                   labelId="dealership-label"
                   label={t('create.dealership')}
+                  onChange={(event) => field.onChange(Number(event.target.value))}
                 >
                   {dealerships.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
@@ -534,9 +525,10 @@ export function CreateAppointmentPage() {
                   label={t('create.preferredDate')}
                   value={field.value ? dayjs(field.value) : null}
                   minDate={dayjs().startOf('day')}
-                  onChange={(value: Dayjs | null) =>
+                  onChange={(value: Dayjs | null) => {
                     field.onChange(value ? value.format('YYYY-MM-DD') : '')
-                  }
+                    setAvailability(null)
+                  }}
                   slotProps={{
                     textField: {
                       fullWidth: true,
@@ -605,17 +597,17 @@ export function CreateAppointmentPage() {
                 <Typography variant="h6">{t('create.available')}</Typography>
               </Stack>
               <Typography>
-                ✓ {t('create.technician')}: {availability.technician.name}
+                ✓ {t('create.technician')}: {availability.technicianName}
               </Typography>
               <Typography>
-                ✓ {t('create.serviceBay')}: {availability.serviceBay.name}
+                ✓ {t('create.serviceBay')}: {availability.serviceBayName}
               </Typography>
               <Typography>
-                {t('create.duration')}: {availability.durationMinutes}{' '}
+                {t('create.duration')}: {availability.duration}{' '}
                 {t('create.minutes')}
               </Typography>
               <Typography>
-                {t('create.estimatedEnd')}: {availability.estimatedEndTime}
+                {t('create.estimatedEnd')}: {availability.endTime}
               </Typography>
               <Box>
                 <Button
@@ -634,26 +626,8 @@ export function CreateAppointmentPage() {
                 <Typography variant="h6">{t('create.unavailable')}</Typography>
               </Stack>
               <Typography color="text.secondary">
-                {availability.message}
+                {availability.message || t('create.unavailable')}
               </Typography>
-              <Typography sx={{ fontWeight: 600 }}>
-                {t('create.suggestedTimes')}
-              </Typography>
-              <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
-                {availability.suggestedTimes.map((time) => (
-                  <Chip
-                    key={time}
-                    label={time}
-                    clickable
-                    color="primary"
-                    variant="outlined"
-                    onClick={() => {
-                      setValue('preferredTime', time, { shouldValidate: true })
-                      setAvailability(null)
-                    }}
-                  />
-                ))}
-              </Stack>
             </Stack>
           )}
         </Paper>

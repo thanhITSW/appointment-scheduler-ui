@@ -65,9 +65,8 @@ export const statusColors: Record<
   string,
   'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'
 > = {
-  scheduled: 'info',
-  in_progress: 'primary',
-  completed: 'success',
-  cancelled: 'default',
-  no_show: 'error',
+  PENDING: 'warning',
+  CONFIRMED: 'info',
+  COMPLETED: 'success',
+  CANCELLED: 'default',
 }
