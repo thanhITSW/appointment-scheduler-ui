@@ -4,9 +4,9 @@
 
 ### Purpose
 
-Provide a **Service Advisor console** that replaces manual dealership booking: schedule a service for a vehicle at a dealership, check bay + technician availability, and persist the confirmed appointment — backed by the [Appointment API](../appointment-api/README.md).
+Provide a **Service Advisor console** that replaces manual dealership booking: schedule a service for a vehicle at a dealership, check bay + technician availability, and persist the confirmed appointment — backed by the [Appointment Scheduler API](../appointment-scheduler-api/README.md).
 
-This repository implements the **frontend service layer and UI** for **Scenario A: The Unified Service Scheduler** (Ownership domain).
+This repository is the **advisor UI** for **Scenario A: The Unified Service Scheduler** (Ownership domain). The challenge **service layer** (booking rules, availability, concurrency) is implemented in [`appointment-scheduler-api`](../appointment-scheduler-api/).
 
 ### Challenge scenario selected
 
@@ -14,8 +14,8 @@ This repository implements the **frontend service layer and UI** for **Scenario 
 |------|--------|
 | Scenario | **A — The Unified Service Scheduler** |
 | Domain | Ownership |
-| Implementation focus | **Frontend** — React SPA + typed service layer |
-| Companion backend | [`appointment-api`](../appointment-api/) (Spring Boot REST) |
+| Implementation focus | **Backend service layer** (see companion API) + this React SPA |
+| Companion backend | [`appointment-scheduler-api`](../appointment-scheduler-api/) (Spring Boot REST) |
 
 ### Main features (implemented)
 
@@ -29,8 +29,9 @@ This repository implements the **frontend service layer and UI** for **Scenario 
 
 ### Scope
 
-- **In scope:** Advisor-facing SPA, HTTP service layer, form validation, error i18n, TanStack Query cache
-- **Out of scope (future):** Availability calendar view, status change / cancel / reschedule UI, role-based menus, automated tests, token refresh on 401
+- **In scope:** Advisor-facing SPA, typed HTTP client, form validation, error i18n, TanStack Query cache
+- **Out of scope (future):** Availability calendar view, status change / cancel / reschedule UI, role-based menus, automated FE tests, token refresh on 401
+- **Backend owns:** dealership-scoped allocation, skill matching, pessimistic locks, `CONFIRMED` booking record (`mvn test`)
 
 ---
 
@@ -144,9 +145,9 @@ Client-side filter by customer name keyword
 
 ---
 
-## 6. Service layer design
+## 6. HTTP client layer
 
-The challenge asks for a **service layer** implementation on either backend or frontend. This repo implements the **frontend service layer** as thin, typed wrappers over REST:
+The challenge requires a **service layer** on backend **or** frontend. This submission implements the domain service layer on the **backend**; this repo provides a typed HTTP client over REST:
 
 | Module | Responsibility |
 |--------|----------------|
@@ -206,7 +207,7 @@ Flow:
 2. `translateMessageCode()` maps to en/vi strings in `i18n/locales/*/errors.ts`
 3. Pages use `getApiErrorMessage(error)` for display
 
-Known booking conflict codes are documented in [appointment-api/docs/API.md](../appointment-api/docs/API.md).
+Known booking conflict codes are documented in [appointment-scheduler-api/docs/API.md](../appointment-scheduler-api/docs/API.md).
 
 ---
 
@@ -242,5 +243,5 @@ This mirrors the backend design: booking logic is centralized; staff APIs add ma
 ## References
 
 - [README.md](README.md) — run instructions
-- [appointment-api/SYSTEM_DESIGN.md](../appointment-api/SYSTEM_DESIGN.md) — backend design
-- [appointment-api/docs/API.md](../appointment-api/docs/API.md) — REST contract
+- [appointment-scheduler-api/SYSTEM_DESIGN.md](../appointment-scheduler-api/SYSTEM_DESIGN.md) — backend design
+- [appointment-scheduler-api/docs/API.md](../appointment-scheduler-api/docs/API.md) — REST contract

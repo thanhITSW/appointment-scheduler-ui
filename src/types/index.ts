@@ -46,6 +46,8 @@ export interface Technician {
   name: string
   employeeCode?: string
   status: TechnicianStatus
+  dealershipId?: number
+  dealershipName?: string
   skillIds?: number[]
 }
 
@@ -53,6 +55,8 @@ export interface ServiceBay {
   id: number
   name: string
   status: ServiceBayStatus
+  dealershipId?: number
+  dealershipName?: string
 }
 
 export interface Appointment {

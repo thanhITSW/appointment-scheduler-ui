@@ -1,8 +1,10 @@
 # Unified Service Scheduler
 
-React SPA for **Service Advisors** — appointment scheduling to replace manual booking, integrated with [Appointment API](../appointment-api/README.md).
+React SPA for **Service Advisors** — appointment scheduling to replace manual booking, integrated with [Appointment Scheduler API](../appointment-scheduler-api/README.md).
 
-**System design:** [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) · **API contract:** [appointment-api/docs/API.md](../appointment-api/docs/API.md)
+**Challenge:** Scenario A — Unified Service Scheduler · **Service layer focus:** [backend](../appointment-scheduler-api/) (`mvn test`) · **This repo:** advisor UI + typed HTTP client
+
+**System design:** [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) · **API contract:** [appointment-scheduler-api/docs/API.md](../appointment-scheduler-api/docs/API.md)
 
 ---
 
@@ -27,7 +29,7 @@ React SPA for **Service Advisors** — appointment scheduling to replace manual 
 - Dashboard — today's appointments, stats, technician/bay counts
 - Appointment list — filter by date/status, search by customer name
 - Create appointment — existing customer (search) or new customer + vehicle inline
-- Availability preview before booking (technician + bay names)
+- Availability preview before booking (technician + bay names at the selected dealership)
 - Appointment detail — status, resources, customer phone, VIN
 
 ---
@@ -37,7 +39,7 @@ React SPA for **Service Advisors** — appointment scheduling to replace manual 
 ### 1. Backend
 
 ```bash
-cd ../appointment-api
+cd ../appointment-scheduler-api
 cp .env.example .env
 docker compose up -d
 mvn spring-boot:run
@@ -90,7 +92,7 @@ Booking uses **public** endpoints; staff list/detail use **private** endpoints w
 
 ---
 
-## Service layer
+## HTTP client layer
 
 HTTP calls live in `src/services/` (`appointment`, `auth`, `customer`, `vehicle`, …), wrapped by TanStack Query hooks in `src/hooks/`.
 
@@ -120,9 +122,9 @@ npm run lint     # oxlint
 | Requirement | Deliverable |
 |-------------|-------------|
 | Scenario | A — The Unified Service Scheduler |
-| System design | [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) |
-| Frontend service layer | `src/services/*` |
-| Backend + tests | [`appointment-api`](../appointment-api/) — `mvn test` |
+| System design | [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) + [API SYSTEM_DESIGN](../appointment-scheduler-api/SYSTEM_DESIGN.md) |
+| Service layer (primary) | [`appointment-scheduler-api`](../appointment-scheduler-api/) — booking + availability + locks · `mvn test` |
+| Frontend | This SPA — advisor UX calling the API |
 | Video walkthrough | Record locally (login → dashboard → create → detail) |
 
 ---
